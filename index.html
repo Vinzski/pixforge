@@ -73,7 +73,7 @@
     select{width:100%}
     button{
       cursor:pointer;
-      transition:transform .05s ease, background .2s ease, border-color .2s ease;
+      transition:transform .05s ease, background .2s ease, border-color .2s ease, opacity .2s ease;
       background:linear-gradient(135deg, rgba(77,163,255,.22), rgba(124,92,255,.18));
       border-color:rgba(77,163,255,.35);
     }
@@ -148,6 +148,7 @@
       overflow:hidden;
       display:grid;
       place-items:center;
+      position:relative;
     }
     canvas{max-width:100%;max-height:100%}
     .pvMeta{color:var(--muted);font-size:12px;margin-top:8px}
@@ -174,8 +175,19 @@
       place-items:center;
       overflow:hidden;
       cursor:pointer;
+      position:relative;
     }
     .thumb img{width:100%;height:100%;object-fit:cover;display:block}
+    .thumb .busyDot{
+      position:absolute;
+      bottom:6px; right:6px;
+      width:10px; height:10px;
+      border-radius:999px;
+      background:rgba(77,163,255,.9);
+      box-shadow:0 0 0 2px rgba(0,0,0,.35);
+      display:none;
+    }
+    .thumb.busy .busyDot{display:block}
 
     .meta{min-width:0}
     .name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -246,6 +258,7 @@
       display:grid;
       place-items:center;
       padding:10px;
+      position:relative;
     }
     .stage img{
       max-width:100%;
@@ -278,6 +291,107 @@
       border-radius:999px;
       padding:6px 10px;
       background:rgba(0,0,0,.14);
+    }
+
+    /* ===== Alerts (toasts) ===== */
+    .toasts{
+      position:fixed;
+      top:14px;
+      right:14px;
+      z-index:2000;
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+      width:min(420px, calc(100vw - 28px));
+      pointer-events:none;
+    }
+    .toast{
+      pointer-events:auto;
+      border:1px solid rgba(255,255,255,.12);
+      background:rgba(18,24,38,.92);
+      backdrop-filter: blur(10px);
+      border-radius:14px;
+      box-shadow:0 18px 60px rgba(0,0,0,.45);
+      overflow:hidden;
+      display:grid;
+      grid-template-columns:10px 1fr auto;
+      gap:10px;
+      align-items:stretch;
+      animation: pop .18s ease-out;
+    }
+    @keyframes pop{from{transform:translateY(-6px);opacity:.0} to{transform:translateY(0);opacity:1}}
+    .toast .stripe{background:rgba(77,163,255,.85)}
+    .toast.ok .stripe{background:rgba(46,229,157,.85)}
+    .toast.warn .stripe{background:rgba(255,204,102,.9)}
+    .toast.bad .stripe{background:rgba(255,85,119,.9)}
+    .toast .body{padding:10px 0}
+    .toast .title{font-weight:700; font-size:12px}
+    .toast .msg{color:var(--muted); font-size:12px; margin-top:3px; white-space:pre-wrap}
+    .toast .x{
+      border:0;
+      background:transparent;
+      color:rgba(255,255,255,.75);
+      padding:10px 12px;
+      cursor:pointer;
+    }
+    .toast .x:hover{color:white}
+    .toast details{
+      margin-top:6px;
+      border-top:1px solid rgba(255,255,255,.10);
+      padding-top:6px;
+      color:var(--muted);
+      font-size:12px;
+    }
+    .toast summary{cursor:pointer}
+
+    /* ===== Global loading overlay ===== */
+    .overlay{
+      position:fixed; inset:0;
+      z-index:1500;
+      display:none;
+      place-items:center;
+      background:rgba(0,0,0,.55);
+      backdrop-filter: blur(6px);
+      padding:18px;
+    }
+    .overlay.show{display:grid}
+    .overlayCard{
+      width:min(520px, 96vw);
+      border:1px solid rgba(255,255,255,.12);
+      background:rgba(18,24,38,.92);
+      border-radius:16px;
+      box-shadow:0 20px 70px rgba(0,0,0,.55);
+      padding:14px;
+    }
+    .overlayTop{display:flex;align-items:center;justify-content:space-between;gap:10px}
+    .spinner{
+      width:18px;height:18px;border-radius:999px;
+      border:2px solid rgba(255,255,255,.15);
+      border-top-color:rgba(77,163,255,.9);
+      animation: spin .8s linear infinite;
+    }
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .overlayMsg{margin-top:10px;color:var(--muted);font-size:12px}
+    .overlayProg{
+      height:10px;border-radius:999px;border:1px solid rgba(255,255,255,.12);
+      background:rgba(255,255,255,.04);overflow:hidden;margin-top:10px
+    }
+    .overlayBar{
+      height:100%; width:0%;
+      background:linear-gradient(90deg, rgba(77,163,255,.85), rgba(124,92,255,.85));
+      transition:width .15s ease;
+    }
+
+    /* Small inline spinner for buttons (optional) */
+    .btnSpin{
+      display:inline-block;
+      width:12px;height:12px;
+      margin-right:8px;
+      border-radius:999px;
+      border:2px solid rgba(255,255,255,.18);
+      border-top-color:rgba(255,255,255,.9);
+      animation: spin .8s linear infinite;
+      vertical-align:-2px;
     }
   </style>
 </head>
@@ -369,7 +483,7 @@
           </div>
         </div>
 
-        <!-- GLOBAL PREVIEW PANELS (RESTORED) -->
+        <!-- GLOBAL PREVIEW PANELS -->
         <div class="previewWrap">
           <div class="pvBox">
             <div class="pvTitle"><b>Preview: Original (sample)</b><span class="chip" id="pvOrigMeta">—</span></div>
@@ -407,6 +521,24 @@
         </div>
       </div>
     </section>
+  </div>
+</div>
+
+<!-- TOASTS -->
+<div class="toasts" id="toasts"></div>
+
+<!-- GLOBAL LOADING OVERLAY -->
+<div class="overlay" id="overlay">
+  <div class="overlayCard">
+    <div class="overlayTop">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div class="spinner"></div>
+        <b id="overlayTitle" style="font-size:12px">Working…</b>
+      </div>
+      <span class="tiny" id="overlayPct">0%</span>
+    </div>
+    <div class="overlayMsg" id="overlayMsg">Please wait…</div>
+    <div class="overlayProg"><div class="overlayBar" id="overlayBar"></div></div>
   </div>
 </div>
 
@@ -501,7 +633,7 @@
   const kpiOut = $("kpiOut");
   const kpiTarget = $("kpiTarget");
 
-  // Global preview canvases (RESTORED)
+  // Global preview canvases
   const pvOrig = $("pvOrig");
   const pvOut  = $("pvOut");
   const pvOrigMeta = $("pvOrigMeta");
@@ -509,6 +641,16 @@
   const pvModeChip = $("pvModeChip");
   const pvSizeChip = $("pvSizeChip");
   const pvFmtChip  = $("pvFmtChip");
+
+  // Toasts
+  const toastsEl = $("toasts");
+
+  // Overlay
+  const overlay = $("overlay");
+  const overlayTitle = $("overlayTitle");
+  const overlayMsg = $("overlayMsg");
+  const overlayBar = $("overlayBar");
+  const overlayPct = $("overlayPct");
 
   // Modal
   const modal = $("modal");
@@ -533,6 +675,76 @@
   let modalItemId = null;
   let cropper = null;
 
+  // UI busy counter: blocks major actions while >0
+  let busyCount = 0;
+
+  function setUIBusy(on, opts = {}){
+    const { title="Working…", msg="Please wait…", pct=null, showOverlay=true } = opts;
+
+    if (on) busyCount++; else busyCount = Math.max(0, busyCount - 1);
+
+    const busy = busyCount > 0;
+    // Disable heavy global actions while busy
+    pickBtn.disabled = busy;
+    fileInput.disabled = busy;
+    previewAllBtn.disabled = busy || !items.length;
+    processAllBtn.disabled = busy || !items.length;
+    downloadZipBtn.disabled = busy || processed.size === 0;
+    clearAllBtn.disabled = busy;
+
+    setBulkFromFirstBtn.disabled = busy || !items.length;
+    clearAllCropsBtn.disabled = busy || !items.length;
+
+    // keep overlay in sync
+    if (showOverlay){
+      if (busy){
+        overlay.classList.add("show");
+        overlayTitle.textContent = title;
+        overlayMsg.textContent = msg;
+        if (pct == null){
+          overlayBar.style.width = "20%";
+          overlayPct.textContent = "…";
+        }else{
+          const p = Math.max(0, Math.min(100, Math.floor(pct)));
+          overlayBar.style.width = p + "%";
+          overlayPct.textContent = p + "%";
+        }
+      }else{
+        overlay.classList.remove("show");
+        overlayBar.style.width = "0%";
+        overlayPct.textContent = "0%";
+      }
+    }
+
+    // also update top status (don’t spam if busy)
+    if (!busy) statusTop.textContent = "Ready";
+  }
+
+  function toast(type, title, msg, details){
+    const div = document.createElement("div");
+    div.className = `toast ${type || ""}`;
+    div.innerHTML = `
+      <div class="stripe"></div>
+      <div class="body">
+        <div class="title">${escapeHtml(title || "Notice")}</div>
+        <div class="msg">${escapeHtml(msg || "")}</div>
+        ${details ? `<details><summary>Details</summary><div style="margin-top:6px;white-space:pre-wrap">${escapeHtml(details)}</div></details>` : ""}
+      </div>
+      <button class="x" type="button" aria-label="Close">✕</button>
+    `;
+    const btn = div.querySelector(".x");
+    const kill = ()=>{ div.style.opacity="0"; div.style.transform="translateY(-4px)"; setTimeout(()=>div.remove(), 180); };
+    btn.addEventListener("click", kill);
+    toastsEl.appendChild(div);
+    // auto close
+    setTimeout(kill, type === "bad" ? 6500 : 4200);
+  }
+
+  function confirmDanger(message){
+    // keep it simple + consistent; you can replace with a custom modal later
+    return window.confirm(message);
+  }
+
   function fmtBytes(n){
     if (!Number.isFinite(n)) return "—";
     const u = ["B","KB","MB","GB"];
@@ -550,6 +762,15 @@
     const cropped = items.filter(it=>!!it.cropP).length;
     cropCountEl.textContent = `Cropped images: ${cropped}`;
     templateStatus.textContent = cropTemplate ? "Template: set" : "Template: none";
+
+    // keep global buttons in sync if not busy
+    if (busyCount === 0){
+      previewAllBtn.disabled = !items.length;
+      processAllBtn.disabled = !items.length;
+      setBulkFromFirstBtn.disabled = !items.length;
+      clearAllCropsBtn.disabled = !items.length;
+      downloadZipBtn.disabled = processed.size === 0;
+    }
   }
 
   function getSettings(){
@@ -579,9 +800,16 @@
   async function ensureBgLib(){
     if (removeBackground) return;
     statusTop.textContent = "Loading background remover…";
-    const mod = await import("https://esm.sh/@imgly/background-removal@1.5.0");
-    removeBackground = mod.removeBackground || mod.default || null;
-    statusTop.textContent = "Ready";
+    setUIBusy(true, { title:"Loading module…", msg:"Loading background remover library", pct: 15 });
+    try{
+      const mod = await import("https://esm.sh/@imgly/background-removal@1.5.0");
+      removeBackground = mod.removeBackground || mod.default || null;
+      if (!removeBackground) throw new Error("removeBackground export missing");
+      toast("ok", "Background remover ready", "Library loaded.");
+    } finally {
+      setUIBusy(false);
+      statusTop.textContent = "Ready";
+    }
   }
 
   // ===== BMP encoder =====
@@ -857,7 +1085,7 @@
     it.outBlob=null; it.outBytes=0; it.outName=""; it.outW2=null; it.outH2=null;
 
     processed.delete(it.id);
-    downloadZipBtn.disabled = processed.size === 0;
+    downloadZipBtn.disabled = processed.size === 0 || busyCount>0;
   }
 
   // ===== Global preview helper =====
@@ -902,6 +1130,14 @@
   async function processOne(id, { previewOnly }){
     const it = items.find(x=>x.id===id);
     if (!it) return;
+
+    if (it.isBusy){
+      toast("warn", "Already running", "That image is still processing.");
+      return;
+    }
+
+    it.isBusy = true;
+    render();
 
     try{
       const opts = getSettings();
@@ -974,6 +1210,7 @@
         it.previewW = canvas.width;
         it.previewH = canvas.height;
         setItemState(it, "Preview ready", "ok", 100);
+        toast("ok", "Preview ready", it.file.name);
         return;
       }
 
@@ -989,16 +1226,21 @@
       it.outH2 = canvas.height;
 
       processed.set(it.id, blob);
-      downloadZipBtn.disabled = processed.size === 0;
+      downloadZipBtn.disabled = (processed.size === 0) || busyCount>0;
 
       setItemState(it, "Done", "ok", 100);
+      toast("ok", "Processed", it.outName + " (" + fmtBytes(it.outBytes) + ")");
     } catch (err){
       console.error(err);
       setItemState(it, `Failed: ${err?.message || "Unknown error"}`, "bad", 100);
+      toast("bad", "Processing failed", it.file.name, String(err?.stack || err));
+    } finally {
+      it.isBusy = false;
+      render();
     }
   }
 
-  // ===== Render list with per-item preview boxes (RESTORED) =====
+  // ===== Render list with per-item preview boxes =====
   function render(){
     listEl.innerHTML = "";
     emptyEl.style.display = items.length ? "none" : "block";
@@ -1006,12 +1248,14 @@
     for (const it of items){
       const cropLabel = it.cropP ? ` • <span class="warn">Crop:</span> manual` : (cropTemplate ? ` • <span class="warn">Crop:</span> template` : "");
       const bgLabel = it.bgRemovedBlob ? ` • <span class="ok">BG cached</span>` : "";
+      const busy = !!it.isBusy;
 
       const div = document.createElement("div");
       div.className = "item";
       div.innerHTML = `
-        <div class="thumb" data-open="orig" data-id="${it.id}" title="Click to view full / crop">
+        <div class="thumb ${busy ? "busy":""}" data-open="orig" data-id="${it.id}" title="Click to view full / crop">
           <img alt="" src="${it.url}">
+          <span class="busyDot" title="Working…"></span>
         </div>
 
         <div class="meta">
@@ -1024,7 +1268,7 @@
           <div class="status ${it.statusClass || ""}">${it.status || "Waiting"}</div>
           <div class="prog"><div class="bar" style="width:${it.progress||0}%"></div></div>
 
-          <!-- PER-ITEM PREVIEWS (RESTORED) -->
+          <!-- PER-ITEM PREVIEWS -->
           <div class="previewWrap" style="margin-top:10px">
             <div class="pvBox">
               <div class="pvTitle"><b>Preview output</b><span class="chip">${it.previewW||"—"}×${it.previewH||"—"}</span></div>
@@ -1049,11 +1293,11 @@
         </div>
 
         <div class="actions">
-          <button class="secondary" type="button" data-act="manualCrop" data-id="${it.id}" title="Open full view + crop.">Crop</button>
-          <button class="secondary" type="button" data-act="preview" data-id="${it.id}" title="Generate preview for this image.">Preview</button>
-          <button class="secondary" type="button" data-act="process" data-id="${it.id}" title="Generate final output for this image.">Process</button>
-          <button class="secondary" type="button" data-act="download" data-id="${it.id}" ${it.outBlob ? "" : "disabled"} title="Download this processed image.">Download</button>
-          <button class="danger" type="button" data-act="remove" data-id="${it.id}" title="Remove this image.">Remove</button>
+          <button class="secondary" type="button" data-act="manualCrop" data-id="${it.id}" ${busy ? "disabled":""} title="Open full view + crop.">Crop</button>
+          <button class="secondary" type="button" data-act="preview" data-id="${it.id}" ${busy ? "disabled":""} title="Generate preview for this image.">${busy ? `<span class="btnSpin"></span>`:""}Preview</button>
+          <button class="secondary" type="button" data-act="process" data-id="${it.id}" ${busy ? "disabled":""} title="Generate final output for this image.">${busy ? `<span class="btnSpin"></span>`:""}Process</button>
+          <button class="secondary" type="button" data-act="download" data-id="${it.id}" ${(it.outBlob && !busy) ? "" : "disabled"} title="Download this processed image.">Download</button>
+          <button class="danger" type="button" data-act="remove" data-id="${it.id}" ${busy ? "disabled":""} title="Remove this image.">Remove</button>
         </div>
       `;
       listEl.appendChild(div);
@@ -1068,9 +1312,20 @@
 
         if (act === "remove") removeItem(id);
         if (act === "manualCrop") openModal(id, "orig");
-        if (act === "preview"){ statusTop.textContent="Previewing…"; await processOne(id,{previewOnly:true}); statusTop.textContent="Ready"; }
-        if (act === "process"){ statusTop.textContent="Processing…"; await processOne(id,{previewOnly:false}); statusTop.textContent="Ready"; }
-        if (act === "download"){ if (it.outBlob) saveAs(it.outBlob, it.outName); }
+        if (act === "preview"){
+          statusTop.textContent="Previewing…";
+          await processOne(id,{previewOnly:true});
+          statusTop.textContent="Ready";
+        }
+        if (act === "process"){
+          statusTop.textContent="Processing…";
+          await processOne(id,{previewOnly:false});
+          statusTop.textContent="Ready";
+        }
+        if (act === "download"){
+          if (it.outBlob) saveAs(it.outBlob, it.outName);
+          else toast("warn","Nothing to download","Process the image first.");
+        }
       });
     });
 
@@ -1087,15 +1342,24 @@
     const idx = items.findIndex(x=>x.id===id);
     if (idx<0) return;
     const it = items[idx];
+
+    if (it.isBusy){
+      toast("warn","Can’t remove yet","That image is still processing.");
+      return;
+    }
+
+    if (!confirmDanger(`Remove "${it.file.name}"?`)) return;
+
     if (it.url) URL.revokeObjectURL(it.url);
     if (it.previewUrl) URL.revokeObjectURL(it.previewUrl);
     if (it.outUrl) URL.revokeObjectURL(it.outUrl);
     items.splice(idx,1);
     processed.delete(id);
-    downloadZipBtn.disabled = processed.size === 0;
+    downloadZipBtn.disabled = processed.size === 0 || busyCount>0;
     updateKPI();
     render();
     updateGlobalOrigPreview();
+    toast("ok","Removed", it.file.name);
   }
 
   // ===== Modal / Cropper (percent-based crop) =====
@@ -1151,6 +1415,7 @@
       else cropInfo.textContent = "No crop set.";
     }catch(err){
       cropInfo.textContent = `Failed to load image: ${err.message}`;
+      toast("bad","Modal load failed", it.file.name, err?.stack || String(err));
     }
   }
 
@@ -1224,6 +1489,7 @@
     render();
 
     cropInfo.textContent = "Manual crop saved. Preview/Process to see the result.";
+    toast("ok","Crop saved","Manual crop stored for this image.");
     resetCropBtn.disabled = true;
     applyCropBtn.disabled = true;
     applyTemplateAllBtn.disabled = true;
@@ -1247,7 +1513,6 @@
     // manual crops stay; others use template
     for (const it of items){
       if (it.cropP && it.cropP.source === "manual") continue;
-      // no need to store cropP for them; they will use cropTemplate
       invalidateOutputs(it);
     }
 
@@ -1256,6 +1521,7 @@
     render();
 
     cropInfo.textContent = "Template saved. It will apply to all (manual crops kept).";
+    toast("ok","Template saved","Applied as default crop for all images (manual overrides kept).");
     resetCropBtn.disabled = true;
     applyCropBtn.disabled = true;
     applyTemplateAllBtn.disabled = true;
@@ -1265,7 +1531,6 @@
     const it = items.find(x=>x.id===modalItemId);
     if (!it) return;
 
-    // clears only this image manual crop
     it.cropP = null;
     invalidateOutputs(it);
 
@@ -1274,6 +1539,7 @@
     render();
 
     cropInfo.textContent = cropTemplate ? "Manual crop cleared. Template may still apply." : "Crop cleared.";
+    toast("warn","Crop cleared","Manual crop removed for this image.");
     resetCropBtn.disabled = true;
     applyCropBtn.disabled = true;
     applyTemplateAllBtn.disabled = true;
@@ -1298,7 +1564,13 @@
   modal.addEventListener("click", (e)=>{ if (e.target === modal) closeModal(); });
 
   // ===== Files / drag-drop =====
-  pickBtn.addEventListener("click", ()=>fileInput.click());
+  pickBtn.addEventListener("click", ()=>{
+    if (busyCount>0){
+      toast("warn","Busy","Wait until the current operation finishes.");
+      return;
+    }
+    fileInput.click();
+  });
   fileInput.addEventListener("change", (e)=>addFiles([...(e.target.files||[])]).finally(()=>{ fileInput.value=""; }));
 
   ["dragenter","dragover"].forEach(ev=>{
@@ -1307,51 +1579,84 @@
   ["dragleave","drop"].forEach(ev=>{
     drop.addEventListener(ev, (e)=>{ e.preventDefault(); drop.classList.remove("drag"); });
   });
-  drop.addEventListener("drop", (e)=>addFiles([...(e.dataTransfer?.files||[])]));
+  drop.addEventListener("drop", (e)=>{
+    if (busyCount>0){
+      toast("warn","Busy","Wait until the current operation finishes.");
+      return;
+    }
+    addFiles([...(e.dataTransfer?.files||[])]);
+  });
 
   async function addFiles(files){
     const imgs = files.filter(f => f.type.startsWith("image/") || f.name.match(/\.(png|jpe?g|webp|gif|bmp|avif)$/i));
-    if (!imgs.length) return;
-
-    for (const file of imgs){
-      const id = Date.now() + Math.floor(Math.random()*100000);
-      const url = URL.createObjectURL(file);
-      const it = {
-        id, file, url,
-        origW: NaN, origH: NaN, origBytes: file.size,
-        bgRemovedBlob: null,
-        cropP: null, // manual crop as %
-        previewBlob: null, previewUrl: "", previewBytes: 0, previewW:null, previewH:null,
-        outBlob: null, outUrl: "", outBytes: 0, outName: "", outW2:null, outH2:null,
-        status: "Loaded", statusClass: "ok", progress: 0
-      };
-      items.push(it);
-
-      try{
-        const bmp = await createImageBitmap(file);
-        it.origW = bmp.width;
-        it.origH = bmp.height;
-        bmp.close?.();
-      }catch{
-        it.status = "Could not decode (browser limitation)";
-        it.statusClass = "bad";
-      }
+    if (!imgs.length){
+      toast("warn","No images found","Drop/select valid image files.");
+      return;
     }
 
-    updateKPI();
-    render();
-    updateGlobalOrigPreview();
-    updateGlobalSettingsChips();
+    setUIBusy(true, { title:"Loading files…", msg:`Reading ${imgs.length} image(s)`, pct: 10 });
+
+    try{
+      let added = 0;
+      for (let i=0; i<imgs.length; i++){
+        const file = imgs[i];
+        const id = Date.now() + Math.floor(Math.random()*100000);
+        const url = URL.createObjectURL(file);
+        const it = {
+          id, file, url,
+          origW: NaN, origH: NaN, origBytes: file.size,
+          bgRemovedBlob: null,
+          cropP: null,
+          previewBlob: null, previewUrl: "", previewBytes: 0, previewW:null, previewH:null,
+          outBlob: null, outUrl: "", outBytes: 0, outName: "", outW2:null, outH2:null,
+          status: "Loaded", statusClass: "ok", progress: 0,
+          isBusy: false
+        };
+        items.push(it);
+
+        // update overlay progress
+        const pct = 10 + Math.floor(((i+1)/imgs.length) * 70);
+        overlayTitle.textContent = "Loading files…";
+        overlayMsg.textContent = `Decoding ${i+1}/${imgs.length}: ${file.name}`;
+        overlayBar.style.width = pct + "%";
+        overlayPct.textContent = pct + "%";
+
+        try{
+          const bmp = await createImageBitmap(file);
+          it.origW = bmp.width;
+          it.origH = bmp.height;
+          bmp.close?.();
+          added++;
+        }catch{
+          it.status = "Could not decode (browser limitation)";
+          it.statusClass = "bad";
+        }
+      }
+
+      updateKPI();
+      render();
+      updateGlobalOrigPreview();
+      updateGlobalSettingsChips();
+
+      toast("ok","Images added", `${added} loaded • ${imgs.length-added} failed`);
+    } finally {
+      setUIBusy(false);
+    }
   }
 
   // ===== Buttons =====
   setBulkFromFirstBtn.addEventListener("click", ()=>{
-    if (!items.length) return;
+    if (!items.length){
+      toast("warn","No images","Add images first.");
+      return;
+    }
     openModal(items[0].id, "orig");
-    // user sets crop box then clicks Apply template to ALL
   });
 
   clearAllCropsBtn.addEventListener("click", ()=>{
+    if (!items.length) return;
+    if (!confirmDanger("Clear ALL crops (template + manual) for all images?")) return;
+
     cropTemplate = null;
     for (const it of items){
       it.cropP = null;
@@ -1359,38 +1664,108 @@
     }
     updateKPI();
     render();
+    toast("ok","Crops cleared","Template + manual crops removed.");
   });
 
   previewAllBtn.addEventListener("click", async ()=>{
-    if (!items.length) return;
+    if (!items.length){
+      toast("warn","No images","Add images first.");
+      return;
+    }
+
+    setUIBusy(true, { title:"Previewing all…", msg:`Generating previews for ${items.length} image(s)`, pct: 5 });
     statusTop.textContent = "Previewing all…";
-    for (const it of items) await processOne(it.id, { previewOnly:true });
-    statusTop.textContent = "Ready";
+
+    try{
+      for (let i=0; i<items.length; i++){
+        const it = items[i];
+        const pct = 5 + Math.floor(((i+1)/items.length) * 90);
+        overlayTitle.textContent = "Previewing all…";
+        overlayMsg.textContent = `Preview ${i+1}/${items.length}: ${it.file.name}`;
+        overlayBar.style.width = pct + "%";
+        overlayPct.textContent = pct + "%";
+        await processOne(it.id, { previewOnly:true });
+      }
+      toast("ok","Preview all done", `${items.length} preview(s) generated.`);
+    } finally {
+      setUIBusy(false);
+      statusTop.textContent = "Ready";
+    }
   });
 
   processAllBtn.addEventListener("click", async ()=>{
-    if (!items.length) return;
+    if (!items.length){
+      toast("warn","No images","Add images first.");
+      return;
+    }
+
+    setUIBusy(true, { title:"Processing all…", msg:`Processing ${items.length} image(s)`, pct: 5 });
     statusTop.textContent = "Processing all…";
-    processed.clear();
-    for (const it of items) await processOne(it.id, { previewOnly:false });
-    downloadZipBtn.disabled = processed.size === 0;
-    statusTop.textContent = "Ready";
+
+    try{
+      processed.clear();
+      for (let i=0; i<items.length; i++){
+        const it = items[i];
+        const pct = 5 + Math.floor(((i+1)/items.length) * 90);
+        overlayTitle.textContent = "Processing all…";
+        overlayMsg.textContent = `Process ${i+1}/${items.length}: ${it.file.name}`;
+        overlayBar.style.width = pct + "%";
+        overlayPct.textContent = pct + "%";
+        await processOne(it.id, { previewOnly:false });
+      }
+      downloadZipBtn.disabled = processed.size === 0 || busyCount>0;
+      toast("ok","Process all done", `${processed.size} output(s) ready.`);
+    } finally {
+      setUIBusy(false);
+      statusTop.textContent = "Ready";
+    }
   });
 
   downloadZipBtn.addEventListener("click", async ()=>{
-    if (!processed.size) return;
-    statusTop.textContent = "Building ZIP…";
-    const zip = new JSZip();
-    for (const it of items){
-      if (!it.outBlob) continue;
-      zip.file(it.outName, it.outBlob);
+    if (!processed.size){
+      toast("warn","Nothing to zip","Run Process all or process some images first.");
+      return;
     }
-    const blob = await zip.generateAsync({type:"blob"});
-    saveAs(blob, `images_${Date.now()}.zip`);
-    statusTop.textContent = "Ready";
+
+    setUIBusy(true, { title:"Building ZIP…", msg:`Packing ${processed.size} file(s)`, pct: 10 });
+    statusTop.textContent = "Building ZIP…";
+
+    try{
+      const zip = new JSZip();
+      let count = 0;
+      for (const it of items){
+        if (!it.outBlob) continue;
+        zip.file(it.outName, it.outBlob);
+        count++;
+        const pct = 10 + Math.floor((count/processed.size) * 70);
+        overlayBar.style.width = pct + "%";
+        overlayPct.textContent = pct + "%";
+        overlayMsg.textContent = `Adding ${count}/${processed.size}: ${it.outName}`;
+      }
+      overlayMsg.textContent = "Compressing…";
+      overlayBar.style.width = "90%";
+      overlayPct.textContent = "90%";
+
+      const blob = await zip.generateAsync({type:"blob"});
+      saveAs(blob, `images_${Date.now()}.zip`);
+
+      toast("ok","ZIP downloaded", `${count} file(s) packed.`);
+    } catch (err){
+      console.error(err);
+      toast("bad","ZIP failed","Could not generate ZIP.", String(err?.stack || err));
+    } finally {
+      setUIBusy(false);
+      statusTop.textContent = "Ready";
+    }
   });
 
   clearAllBtn.addEventListener("click", ()=>{
+    if (!items.length){
+      toast("warn","Nothing to clear","No images loaded.");
+      return;
+    }
+    if (!confirmDanger("Clear EVERYTHING? This removes all images, previews, outputs, and crop template.")) return;
+
     for (const it of items){
       if (it.url) URL.revokeObjectURL(it.url);
       if (it.previewUrl) URL.revokeObjectURL(it.previewUrl);
@@ -1405,6 +1780,24 @@
     updateGlobalOrigPreview();
     pvOut.getContext("2d").clearRect(0,0,pvOut.width,pvOut.height);
     pvOutMeta.textContent = "—";
+    toast("ok","Cleared","App state reset.");
+  });
+
+  // Settings changes invalidate outputs + show lightweight alerts
+  function onSettingsChanged(){
+    updateGlobalSettingsChips();
+    // Do NOT auto-invalidate everything (that can be expensive UX),
+    // but make it clear previews/outputs reflect old settings until rerun.
+    statusTop.textContent = "Settings changed (re-preview/process)";
+    toast("warn","Settings changed","Re-run Preview/Process to apply new settings.");
+  }
+
+  [formatSel, targetKBEl, modeSel, outWEl, outHEl, removeBgEl, autoCenterEl].forEach(el=>{
+    el.addEventListener("change", onSettingsChanged);
+    el.addEventListener("input", ()=>{
+      updateGlobalSettingsChips();
+      updateKPI();
+    });
   });
 
   // init
@@ -1412,6 +1805,7 @@
   render();
   updateGlobalSettingsChips();
   updateGlobalOrigPreview();
+  toast("ok","Ready","Drop images to begin.");
 </script>
 </body>
 </html>
