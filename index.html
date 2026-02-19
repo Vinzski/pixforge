@@ -1,0 +1,1417 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>PIXFORGE</title>
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cropperjs@1.6.2/dist/cropper.min.css">
+
+  <style>
+    :root{
+      --bg:#0b0f17; --card:#121826; --muted:#8aa0b6; --text:#eaf2ff;
+      --accent:#4da3ff; --accent2:#7c5cff; --ok:#2ee59d; --warn:#ffcc66; --bad:#ff5577;
+      --border:rgba(255,255,255,.10);
+    }
+    *{box-sizing:border-box}
+    html, body{height:100%}
+    body{
+      margin:0; font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Arial;
+      color:var(--text);
+      background:linear-gradient(180deg,#070a10, #0b0f17 40%, #070a10);
+    }
+    .app{min-height:100%;display:grid;grid-template-rows:auto 1fr}
+    header{
+      padding:14px 16px;
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:12px;
+      border-bottom:1px solid rgba(255,255,255,.08);
+      background:rgba(10,14,22,.7);
+      backdrop-filter: blur(10px);
+      position:sticky; top:0; z-index:20;
+    }
+    h1{font-size:18px;margin:0}
+    .sub{color:var(--muted);margin-top:4px;font-size:12px}
+    .pill{font-size:11px;color:var(--muted)}
+    .main{
+      padding:14px 16px;
+      display:grid;
+      grid-template-columns:460px 1fr;
+      gap:14px;
+      align-items:start;
+      width:100%;
+    }
+    @media (max-width: 1100px){ .main{grid-template-columns:1fr} }
+
+    .card{
+      background:rgba(18,24,38,.9);
+      border:1px solid var(--border);
+      border-radius:14px;
+      box-shadow:0 10px 30px rgba(0,0,0,.25);
+      overflow:hidden;
+      min-width:0;
+    }
+    .card .hd{
+      padding:12px 12px 10px;
+      border-bottom:1px solid var(--border);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+    }
+    .card .bd{padding:12px}
+    .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    label{display:block;color:var(--muted);font-size:12px;margin:10px 0 6px}
+    input, select, button{
+      font:inherit; color:var(--text);
+      background:#0c1220; border:1px solid var(--border);
+      border-radius:10px; padding:10px 10px; outline:none;
+    }
+    input[type="number"]{width:100%}
+    select{width:100%}
+    button{
+      cursor:pointer;
+      transition:transform .05s ease, background .2s ease, border-color .2s ease;
+      background:linear-gradient(135deg, rgba(77,163,255,.22), rgba(124,92,255,.18));
+      border-color:rgba(77,163,255,.35);
+    }
+    button:active{transform:translateY(1px)}
+    button.secondary{background:#0c1220;border-color:var(--border)}
+    button.danger{background:rgba(255,85,119,.12);border-color:rgba(255,85,119,.35)}
+    button:disabled{opacity:.45;cursor:not-allowed}
+
+    .drop{
+      border:1px dashed rgba(255,255,255,.22);
+      border-radius:14px;
+      padding:14px;
+      text-align:center;
+      color:var(--muted);
+      background:rgba(255,255,255,.03);
+    }
+    .drop.drag{border-color:rgba(77,163,255,.8); color:var(--text); background:rgba(77,163,255,.08)}
+    .hint{font-size:12px;color:var(--muted);margin-top:6px}
+    .tiny{font-size:12px;color:var(--muted)}
+    .note{color:var(--muted);font-size:12px;margin-top:10px}
+
+    .kpi{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
+    .kpi .box{
+      flex:1; min-width:120px;
+      padding:10px;
+      border:1px solid var(--border);
+      border-radius:12px;
+      background:rgba(255,255,255,.02)
+    }
+    .kpi .val{font-size:14px}
+    .kpi .lab{font-size:11px;color:var(--muted)}
+
+    .footerRow{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+
+    .previewWrap{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:10px;
+      margin-top:12px;
+    }
+    @media (max-width: 520px){ .previewWrap{grid-template-columns:1fr} }
+    .pvBox{
+      border:1px solid var(--border);
+      border-radius:14px;
+      background:rgba(255,255,255,.02);
+      padding:10px;
+      min-width:0;
+    }
+    .pvTitle{display:flex;align-items:center;justify-content:space-between;gap:8px}
+    .pvTitle b{font-size:12px}
+    .chip{
+      font-size:11px;color:var(--muted);
+      border:1px solid rgba(255,255,255,.12);
+      background:rgba(0,0,0,.15);
+      border-radius:999px;
+      padding:6px 10px;
+      white-space:nowrap;
+    }
+    .pvCanvas{
+      width:100%;
+      aspect-ratio: 16/10;
+      margin-top:8px;
+      border-radius:12px;
+      border:1px solid rgba(255,255,255,.12);
+      background:
+        linear-gradient(45deg, rgba(255,255,255,.06) 25%, transparent 25%),
+        linear-gradient(-45deg, rgba(255,255,255,.06) 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, rgba(255,255,255,.06) 75%),
+        linear-gradient(-45deg, transparent 75%, rgba(255,255,255,.06) 75%);
+      background-size: 20px 20px;
+      background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+      overflow:hidden;
+      display:grid;
+      place-items:center;
+    }
+    canvas{max-width:100%;max-height:100%}
+    .pvMeta{color:var(--muted);font-size:12px;margin-top:8px}
+    .miniRow{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px}
+
+    .list{display:flex;flex-direction:column;gap:10px}
+    .item{
+      display:grid;
+      grid-template-columns:92px 1fr auto;
+      gap:10px;
+      align-items:start;
+      padding:10px;
+      border:1px solid var(--border);
+      border-radius:14px;
+      background:rgba(255,255,255,.02);
+      min-width:0;
+    }
+    .thumb{
+      width:92px;height:92px;
+      border-radius:12px;
+      border:1px solid var(--border);
+      background:#0c1220;
+      display:grid;
+      place-items:center;
+      overflow:hidden;
+      cursor:pointer;
+    }
+    .thumb img{width:100%;height:100%;object-fit:cover;display:block}
+
+    .meta{min-width:0}
+    .name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .stats{color:var(--muted);font-size:12px;margin-top:2px}
+    .status{font-size:12px;margin-top:6px}
+    .ok{color:var(--ok)} .warn{color:var(--warn)} .bad{color:var(--bad)}
+    .actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+    .prog{
+      height:8px;border-radius:999px;border:1px solid var(--border);
+      background:rgba(255,255,255,.03);overflow:hidden;margin-top:8px
+    }
+    .bar{height:100%;width:0%;background:linear-gradient(90deg, rgba(77,163,255,.8), rgba(124,92,255,.8))}
+
+    .modal{
+      position:fixed; inset:0; z-index:999;
+      display:none;
+      background:rgba(0,0,0,.62);
+      backdrop-filter: blur(6px);
+      padding:18px;
+    }
+    .modal.show{display:grid; place-items:center}
+    .modalCard{
+      width:min(1280px, 96vw);
+      height:min(820px, 92vh);
+      background:rgba(18,24,38,.98);
+      border:1px solid rgba(255,255,255,.12);
+      border-radius:16px;
+      overflow:hidden;
+      box-shadow:0 20px 70px rgba(0,0,0,.55);
+      display:grid;
+      grid-template-rows:auto 1fr auto;
+      min-width:0;
+    }
+    .modalHd{
+      padding:12px 12px 10px;
+      border-bottom:1px solid rgba(255,255,255,.10);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+    }
+    .modalTitle{
+      min-width:0;
+      display:flex;
+      flex-direction:column;
+      gap:4px;
+    }
+    .modalTitle b{
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+    .modalBody{
+      padding:12px;
+      min-width:0;
+      min-height:0;
+      display:grid;
+      grid-template-columns:1fr 380px;
+      gap:12px;
+    }
+    @media (max-width: 980px){ .modalBody{grid-template-columns:1fr} }
+    .stage{
+      min-width:0; min-height:0;
+      border:1px solid rgba(255,255,255,.10);
+      border-radius:14px;
+      background:rgba(0,0,0,.18);
+      overflow:hidden;
+      display:grid;
+      place-items:center;
+      padding:10px;
+    }
+    .stage img{
+      max-width:100%;
+      max-height:100%;
+      display:block;
+      border-radius:10px;
+      user-select:none;
+    }
+    .sidePanel{
+      border:1px solid rgba(255,255,255,.10);
+      border-radius:14px;
+      background:rgba(255,255,255,.02);
+      padding:12px;
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+    }
+    .modalFt{
+      padding:12px;
+      border-top:1px solid rgba(255,255,255,.10);
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      justify-content:space-between;
+      align-items:center;
+    }
+    .pill2{
+      font-size:11px;color:var(--muted);
+      border:1px solid rgba(255,255,255,.12);
+      border-radius:999px;
+      padding:6px 10px;
+      background:rgba(0,0,0,.14);
+    }
+  </style>
+</head>
+
+<body>
+<div class="app">
+  <header>
+    <div>
+      <h1>PIXFORGE</h1>
+      <div class="sub">Global preview + per-image preview + manual/template crop + BG remove cache + auto-center + ZIP</div>
+    </div>
+    <div class="pill">Desktop/laptop-first • Responsive</div>
+  </header>
+
+  <div class="main">
+    <!-- LEFT -->
+    <section class="card">
+      <div class="hd">
+        <b>Settings</b>
+        <span class="tiny" id="statusTop">Ready</span>
+      </div>
+      <div class="bd">
+        <div class="drop" id="drop">
+          <b>Drop images here</b><br/>
+          or <button class="secondary" id="pickBtn" type="button">Choose files</button>
+          <input id="fileInput" type="file" accept="image/*" multiple hidden />
+          <div class="hint">Hover tips are on the controls. Click a thumbnail to view full + crop.</div>
+        </div>
+
+        <div class="kpi">
+          <div class="box"><div class="val" id="kpiCount">0</div><div class="lab">Images loaded</div></div>
+          <div class="box"><div class="val" id="kpiOut">—</div><div class="lab">Output format</div></div>
+          <div class="box"><div class="val" id="kpiTarget">Off</div><div class="lab">Target size</div></div>
+        </div>
+
+        <label title="Choose output image file type.">Output format</label>
+        <select id="format">
+          <option value="image/png">PNG</option>
+          <option value="image/jpeg">JPEG</option>
+          <option value="image/webp">WebP</option>
+          <option value="image/bmp">BMP</option>
+        </select>
+
+        <label title="Optional. If set, the app will try to compress to this size.">Target file size (KB) — optional</label>
+        <input id="targetKB" type="number" min="1" placeholder="e.g. 400" />
+
+        <label title="Contain = fit. Cover = fill. Stretch = distort. Square = pad to square.">Resize / format mode</label>
+        <select id="mode">
+          <option value="contain">Contain (fit inside)</option>
+          <option value="cover">Cover (fill + crop)</option>
+          <option value="stretch">Stretch (distort)</option>
+          <option value="square">Square-pad (pad to square)</option>
+        </select>
+
+        <label title="Optional. Leave blank to keep original width.">Output width (px) — optional</label>
+        <input id="outW" type="number" min="1" placeholder="e.g. 1024" />
+
+        <label title="Optional. Leave blank to keep original height.">Output height (px) — optional</label>
+        <input id="outH" type="number" min="1" placeholder="e.g. 1024" />
+
+        <div class="row" style="margin-top:12px">
+          <label title="Runs once per image and caches it. If you re-preview/re-process, it will reuse the cached cutout."
+                 style="margin:0;display:flex;align-items:center;gap:10px">
+            <input id="removeBg" type="checkbox" />
+            Remove background (cached)
+          </label>
+        </div>
+
+        <div class="row" style="margin-top:10px">
+          <label title="Detects signature pixels (alpha first, otherwise near-white) and centers the signature before resize."
+                 style="margin:0;display:flex;align-items:center;gap:10px">
+            <input id="autoCenter" type="checkbox" checked />
+            Auto-center signature
+          </label>
+        </div>
+
+        <div class="card" style="margin-top:12px">
+          <div class="hd"><b>Crop (visual)</b><span class="tiny">Mouse crop</span></div>
+          <div class="bd">
+            <div class="row">
+              <button class="secondary" id="setBulkFromFirst" type="button" title="Opens first image and lets you set a template crop to apply to all.">Set crop template (use first image)</button>
+              <button class="secondary" id="clearAllCrops" type="button" title="Clears template + all manual crops.">Clear crops</button>
+            </div>
+            <div class="row" style="margin-top:10px">
+              <span class="pill2" id="templateStatus">Template: none</span>
+              <span class="pill2" id="cropCount">Cropped images: 0</span>
+            </div>
+            <div class="note">Crop is saved as % so it always applies correctly even after BG removal, resizing, or format changes.</div>
+          </div>
+        </div>
+
+        <!-- GLOBAL PREVIEW PANELS (RESTORED) -->
+        <div class="previewWrap">
+          <div class="pvBox">
+            <div class="pvTitle"><b>Preview: Original (sample)</b><span class="chip" id="pvOrigMeta">—</span></div>
+            <div class="pvCanvas"><canvas id="pvOrig"></canvas></div>
+            <div class="pvMeta">Shows the first image you loaded (original).</div>
+          </div>
+          <div class="pvBox">
+            <div class="pvTitle"><b>Preview: Output (sample)</b><span class="chip" id="pvOutMeta">—</span></div>
+            <div class="pvCanvas"><canvas id="pvOut"></canvas></div>
+            <div class="miniRow">
+              <span class="chip" id="pvModeChip">mode: —</span>
+              <span class="chip" id="pvSizeChip">size: —</span>
+              <span class="chip" id="pvFmtChip">fmt: —</span>
+            </div>
+            <div class="pvMeta">Updates when you click “Preview all” or “Preview” on an image.</div>
+          </div>
+        </div>
+
+        <div class="footerRow">
+          <button class="secondary" id="previewAll" type="button" title="Generates previews for all images (not final outputs).">Preview all</button>
+          <button id="processAll" type="button" title="Generates final outputs for all images.">Process all</button>
+          <button class="secondary" id="downloadZip" type="button" disabled title="Downloads all processed outputs as a ZIP file.">Download ZIP</button>
+          <button class="danger" id="clearAll" type="button" title="Removes all images and resets everything.">Clear</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- RIGHT -->
+    <section class="card">
+      <div class="hd"><b>Images</b><span class="tiny">Click to view full • Crop in modal • Preview/Process per item</span></div>
+      <div class="bd">
+        <div class="list" id="list"></div>
+        <div class="tiny" id="empty" style="color:var(--muted);padding:14px;border:1px dashed rgba(255,255,255,.18);border-radius:14px;text-align:center">
+          No images yet. Drop some in the box on the left.
+        </div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div class="modal" id="modal">
+  <div class="modalCard">
+    <div class="modalHd">
+      <div class="modalTitle">
+        <b id="modalTitle">Image</b>
+        <span class="tiny" id="modalSub">—</span>
+      </div>
+      <button class="secondary" id="modalClose" type="button">Close</button>
+    </div>
+
+    <div class="modalBody">
+      <div class="stage"><img id="modalImg" alt=""></div>
+
+      <div class="sidePanel">
+        <b style="font-size:12px">Crop (drag with mouse)</b>
+        <div class="tiny">
+          Start crop → drag/resize → Apply.<br>
+          Template applies to ALL (manual crops override template).
+        </div>
+
+        <div class="row">
+          <button class="secondary" id="startCrop" type="button" disabled>Start crop</button>
+          <button class="secondary" id="resetCrop" type="button" disabled>Reset</button>
+        </div>
+
+        <div class="row">
+          <button id="applyCrop" type="button" disabled>Apply crop (this image)</button>
+          <button class="secondary" id="applyTemplateAll" type="button" disabled>Apply template to ALL</button>
+          <button class="danger" id="clearCrop" type="button" disabled>Clear crop</button>
+        </div>
+
+        <div class="tiny" id="cropInfo">Loading…</div>
+
+        <hr style="border:0;border-top:1px solid rgba(255,255,255,.12);width:100%">
+
+        <b style="font-size:12px">Quick actions</b>
+        <div class="row">
+          <button class="secondary" id="previewThis" type="button">Preview</button>
+          <button class="secondary" id="processThis" type="button">Process</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="modalFt">
+      <span class="tiny">Tip: Crop affects outputs after Preview/Process.</span>
+      <span class="pill2" id="modalWhich">Viewing: ORIG</span>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/cropperjs@1.6.2/dist/cropper.min.js"></script>
+
+<script type="module">
+  let removeBackground = null;
+
+  const $ = (id)=>document.getElementById(id);
+  const clamp01 = (n)=>Math.max(0, Math.min(1, n));
+
+  // Elements
+  const drop = $("drop");
+  const pickBtn = $("pickBtn");
+  const fileInput = $("fileInput");
+  const listEl = $("list");
+  const emptyEl = $("empty");
+  const statusTop = $("statusTop");
+
+  const formatSel = $("format");
+  const targetKBEl = $("targetKB");
+  const modeSel = $("mode");
+  const outWEl = $("outW");
+  const outHEl = $("outH");
+  const removeBgEl = $("removeBg");
+  const autoCenterEl = $("autoCenter");
+
+  const previewAllBtn = $("previewAll");
+  const processAllBtn = $("processAll");
+  const downloadZipBtn = $("downloadZip");
+  const clearAllBtn = $("clearAll");
+
+  const setBulkFromFirstBtn = $("setBulkFromFirst");
+  const clearAllCropsBtn = $("clearAllCrops");
+  const templateStatus = $("templateStatus");
+  const cropCountEl = $("cropCount");
+
+  const kpiCount = $("kpiCount");
+  const kpiOut = $("kpiOut");
+  const kpiTarget = $("kpiTarget");
+
+  // Global preview canvases (RESTORED)
+  const pvOrig = $("pvOrig");
+  const pvOut  = $("pvOut");
+  const pvOrigMeta = $("pvOrigMeta");
+  const pvOutMeta  = $("pvOutMeta");
+  const pvModeChip = $("pvModeChip");
+  const pvSizeChip = $("pvSizeChip");
+  const pvFmtChip  = $("pvFmtChip");
+
+  // Modal
+  const modal = $("modal");
+  const modalClose = $("modalClose");
+  const modalTitle = $("modalTitle");
+  const modalSub = $("modalSub");
+  const modalImg = $("modalImg");
+  const startCropBtn = $("startCrop");
+  const resetCropBtn = $("resetCrop");
+  const applyCropBtn = $("applyCrop");
+  const applyTemplateAllBtn = $("applyTemplateAll");
+  const clearCropBtn = $("clearCrop");
+  const cropInfo = $("cropInfo");
+  const previewThisBtn = $("previewThis");
+  const processThisBtn = $("processThis");
+  const modalWhich = $("modalWhich");
+
+  // State
+  const items = [];
+  const processed = new Map(); // id -> blob
+  let cropTemplate = null;     // {xP,yP,wP,hP,source:"template"}
+  let modalItemId = null;
+  let cropper = null;
+
+  function fmtBytes(n){
+    if (!Number.isFinite(n)) return "—";
+    const u = ["B","KB","MB","GB"];
+    let i=0, v=n;
+    while (v>=1024 && i<u.length-1){v/=1024;i++}
+    return `${v.toFixed(i?1:0)} ${u[i]}`;
+  }
+
+  function updateKPI(){
+    kpiCount.textContent = String(items.length);
+    kpiOut.textContent = (formatSel.value.split("/")[1]||"—").toUpperCase();
+    const t = Number(targetKBEl.value);
+    kpiTarget.textContent = t ? `${t} KB` : "Off";
+
+    const cropped = items.filter(it=>!!it.cropP).length;
+    cropCountEl.textContent = `Cropped images: ${cropped}`;
+    templateStatus.textContent = cropTemplate ? "Template: set" : "Template: none";
+  }
+
+  function getSettings(){
+    return {
+      outMime: formatSel.value,
+      targetKB: Number(targetKBEl.value) || 0,
+      mode: modeSel.value,
+      outW: Number(outWEl.value) || 0,
+      outH: Number(outHEl.value) || 0,
+      doRemoveBg: !!removeBgEl.checked,
+      autoCenter: !!autoCenterEl.checked,
+    };
+  }
+
+  function mimeToExt(m){
+    if (m === "image/png") return "png";
+    if (m === "image/jpeg") return "jpg";
+    if (m === "image/webp") return "webp";
+    if (m === "image/bmp") return "bmp";
+    return "bin";
+  }
+
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, m=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[m]));
+  }
+
+  async function ensureBgLib(){
+    if (removeBackground) return;
+    statusTop.textContent = "Loading background remover…";
+    const mod = await import("https://esm.sh/@imgly/background-removal@1.5.0");
+    removeBackground = mod.removeBackground || mod.default || null;
+    statusTop.textContent = "Ready";
+  }
+
+  // ===== BMP encoder =====
+  function canvasToBMP(canvas){
+    const ctx = canvas.getContext("2d");
+    const { width, height } = canvas;
+    const imgData = ctx.getImageData(0,0,width,height).data;
+
+    const rowSize = Math.floor((24 * width + 31) / 32) * 4;
+    const pixelArraySize = rowSize * height;
+    const fileSize = 54 + pixelArraySize;
+
+    const buf = new ArrayBuffer(fileSize);
+    const dv = new DataView(buf);
+
+    dv.setUint8(0, 0x42); dv.setUint8(1, 0x4D);
+    dv.setUint32(2, fileSize, true);
+    dv.setUint32(6, 0, true);
+    dv.setUint32(10, 54, true);
+
+    dv.setUint32(14, 40, true);
+    dv.setInt32(18, width, true);
+    dv.setInt32(22, height, true);
+    dv.setUint16(26, 1, true);
+    dv.setUint16(28, 24, true);
+    dv.setUint32(30, 0, true);
+    dv.setUint32(34, pixelArraySize, true);
+    dv.setInt32(38, 2835, true);
+    dv.setInt32(42, 2835, true);
+    dv.setUint32(46, 0, true);
+    dv.setUint32(50, 0, true);
+
+    let offset = 54;
+    const padding = rowSize - width * 3;
+
+    for (let y = height - 1; y >= 0; y--){
+      for (let x = 0; x < width; x++){
+        const i = (y * width + x) * 4;
+        const r = imgData[i], g = imgData[i+1], b = imgData[i+2];
+        dv.setUint8(offset++, b);
+        dv.setUint8(offset++, g);
+        dv.setUint8(offset++, r);
+      }
+      for (let p = 0; p < padding; p++) dv.setUint8(offset++, 0);
+    }
+    return new Blob([buf], { type: "image/bmp" });
+  }
+
+  function canvasToBlob(canvas, mime, quality){
+    return new Promise((resolve)=>{
+      if (mime === "image/bmp"){ resolve(canvasToBMP(canvas)); return; }
+      canvas.toBlob((b)=>resolve(b), mime, quality);
+    });
+  }
+
+  function downscaleCanvas(canvas, ratio){
+    const s = Math.max(0.2, Math.min(0.95, Math.sqrt(Math.max(0.05, ratio)) * 0.95));
+    const w = Math.max(1, Math.floor(canvas.width * s));
+    const h = Math.max(1, Math.floor(canvas.height * s));
+    const out=document.createElement("canvas");
+    out.width=w; out.height=h;
+    out.getContext("2d").drawImage(canvas,0,0,w,h);
+    return out;
+  }
+
+  async function encodeToTarget(canvas, mime, targetKB, onProgress){
+    const targetBytes = targetKB * 1024;
+    const qualityCapable = (mime === "image/jpeg" || mime === "image/webp");
+    let workCanvas = canvas;
+
+    for (let pass = 0; pass < 8; pass++){
+      onProgress?.(pass / 8);
+
+      if (qualityCapable){
+        let lo=0.05, hi=0.95, best=null;
+        for (let i=0;i<10;i++){
+          const q=(lo+hi)/2;
+          const b=await canvasToBlob(workCanvas, mime, q);
+          if (!b) break;
+          if (b.size<=targetBytes){ best=b; lo=q; } else { hi=q; }
+        }
+        if (best) return best;
+
+        const low = await canvasToBlob(workCanvas, mime, 0.08);
+        if (low && low.size<=targetBytes) return low;
+        workCanvas = downscaleCanvas(workCanvas, targetBytes/(low?.size||targetBytes));
+      } else {
+        const b = await canvasToBlob(workCanvas, mime);
+        if (b && b.size<=targetBytes) return b;
+        workCanvas = downscaleCanvas(workCanvas, targetBytes/(b?.size||targetBytes));
+      }
+    }
+    return await canvasToBlob(workCanvas, mime, qualityCapable?0.08:undefined);
+  }
+
+  // ===== Auto-center signature =====
+  async function autoCenterSignatureToBitmap(bitmap){
+    const srcW = bitmap.width, srcH = bitmap.height;
+
+    const tmp = document.createElement("canvas");
+    tmp.width = srcW; tmp.height = srcH;
+    const ctx = tmp.getContext("2d", { willReadFrequently: true });
+    ctx.clearRect(0,0,srcW,srcH);
+    ctx.drawImage(bitmap, 0, 0);
+
+    const img = ctx.getImageData(0,0,srcW,srcH);
+    const data = img.data;
+
+    let minX = srcW, minY = srcH, maxX = -1, maxY = -1;
+
+    let hasTransparency = false;
+    for (let i=3; i<data.length; i+=4){
+      if (data[i] < 250){ hasTransparency = true; break; }
+    }
+
+    if (hasTransparency){
+      for (let y=0; y<srcH; y++){
+        const row = y * srcW * 4;
+        for (let x=0; x<srcW; x++){
+          const a = data[row + x*4 + 3];
+          if (a > 8){
+            if (x < minX) minX = x;
+            if (y < minY) minY = y;
+            if (x > maxX) maxX = x;
+            if (y > maxY) maxY = y;
+          }
+        }
+      }
+    } else {
+      const nearWhite = 245;
+      for (let y=0; y<srcH; y++){
+        const row = y * srcW * 4;
+        for (let x=0; x<srcW; x++){
+          const i = row + x*4;
+          const r = data[i], g = data[i+1], b = data[i+2];
+          const lum = (r*0.2126 + g*0.7152 + b*0.0722);
+          if (lum < nearWhite){
+            if (x < minX) minX = x;
+            if (y < minY) minY = y;
+            if (x > maxX) maxX = x;
+            if (y > maxY) maxY = y;
+          }
+        }
+      }
+    }
+
+    if (maxX < minX || maxY < minY) return bitmap;
+
+    const pad = Math.max(2, Math.floor(Math.min(srcW, srcH) * 0.01));
+    minX = Math.max(0, minX - pad);
+    minY = Math.max(0, minY - pad);
+    maxX = Math.min(srcW - 1, maxX + pad);
+    maxY = Math.min(srcH - 1, maxY + pad);
+
+    const boxW = Math.max(1, maxX - minX + 1);
+    const boxH = Math.max(1, maxY - minY + 1);
+
+    const cut = document.createElement("canvas");
+    cut.width = boxW; cut.height = boxH;
+    cut.getContext("2d").drawImage(tmp, minX, minY, boxW, boxH, 0, 0, boxW, boxH);
+
+    const out = document.createElement("canvas");
+    out.width = srcW; out.height = srcH;
+    const octx = out.getContext("2d");
+    if (!hasTransparency){
+      octx.fillStyle = "#ffffff";
+      octx.fillRect(0,0,srcW,srcH);
+    } else {
+      octx.clearRect(0,0,srcW,srcH);
+    }
+    octx.drawImage(cut, Math.floor((srcW-boxW)/2), Math.floor((srcH-boxH)/2));
+
+    return await createImageBitmap(out);
+  }
+
+  // ===== Resize drawing =====
+  function drawToCanvas(imgBitmap, opts){
+    const srcW = imgBitmap.width, srcH = imgBitmap.height;
+    let W = opts.outW || srcW;
+    let H = opts.outH || srcH;
+
+    if (opts.mode === "square"){
+      const s = Math.max(W, H, srcW, srcH);
+      W = s; H = s;
+    }
+
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.floor(W));
+    canvas.height = Math.max(1, Math.floor(H));
+    const ctx = canvas.getContext("2d");
+
+    if (opts.outMime === "image/jpeg" || opts.outMime === "image/bmp"){
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0,0,canvas.width, canvas.height);
+    } else {
+      ctx.clearRect(0,0,canvas.width, canvas.height);
+    }
+
+    if (opts.mode === "stretch"){
+      ctx.drawImage(imgBitmap, 0, 0, canvas.width, canvas.height);
+      return canvas;
+    }
+
+    const dstW = canvas.width, dstH = canvas.height;
+    const srcAR = srcW / srcH;
+    const dstAR = dstW / dstH;
+
+    let drawW, drawH;
+    if (opts.mode === "cover"){
+      if (srcAR > dstAR){ drawH = dstH; drawW = dstH * srcAR; }
+      else { drawW = dstW; drawH = dstW / srcAR; }
+    } else { // contain/square
+      if (srcAR > dstAR){ drawW = dstW; drawH = dstW / srcAR; }
+      else { drawH = dstH; drawW = dstH * srcAR; }
+    }
+
+    const x = (dstW - drawW) / 2;
+    const y = (dstH - drawH) / 2;
+    ctx.drawImage(imgBitmap, x, y, drawW, drawH);
+    return canvas;
+  }
+
+  // ===== Crop percent -> pixels =====
+  function cropPercentToPixels(cropP, w, h){
+    if (!cropP) return null;
+    const x = Math.max(0, Math.floor(cropP.xP * w));
+    const y = Math.max(0, Math.floor(cropP.yP * h));
+    const cw = Math.max(1, Math.floor(cropP.wP * w));
+    const ch = Math.max(1, Math.floor(cropP.hP * h));
+    const x2 = Math.min(w - 1, x);
+    const y2 = Math.min(h - 1, y);
+    const w2 = Math.max(1, Math.min(w - x2, cw));
+    const h2 = Math.max(1, Math.min(h - y2, ch));
+    return { x:x2, y:y2, w:w2, h:h2 };
+  }
+
+  async function pipelineToCanvas(imgBitmap, opts, cropP){
+    let b = imgBitmap;
+
+    // crop first
+    const crop = cropPercentToPixels(cropP, b.width, b.height);
+    if (crop){
+      const c = document.createElement("canvas");
+      c.width = crop.w; c.height = crop.h;
+      c.getContext("2d").drawImage(b, crop.x, crop.y, crop.w, crop.h, 0, 0, crop.w, crop.h);
+      b = await createImageBitmap(c);
+    }
+
+    // auto-center
+    if (opts.autoCenter){
+      const centered = await autoCenterSignatureToBitmap(b);
+      if (b !== imgBitmap) b.close?.();
+      b = centered;
+    }
+
+    const out = drawToCanvas(b, opts);
+    if (b !== imgBitmap) b.close?.();
+    return out;
+  }
+
+  function setItemState(it, status, cls, prog){
+    it.status = status;
+    it.statusClass = cls || "";
+    if (typeof prog === "number") it.progress = Math.max(0, Math.min(100, prog));
+    render();
+  }
+
+  function invalidateOutputs(it){
+    if (it.previewUrl){ URL.revokeObjectURL(it.previewUrl); it.previewUrl=""; }
+    it.previewBlob=null; it.previewBytes=0; it.previewW=null; it.previewH=null;
+
+    if (it.outUrl){ URL.revokeObjectURL(it.outUrl); it.outUrl=""; }
+    it.outBlob=null; it.outBytes=0; it.outName=""; it.outW2=null; it.outH2=null;
+
+    processed.delete(it.id);
+    downloadZipBtn.disabled = processed.size === 0;
+  }
+
+  // ===== Global preview helper =====
+  function drawCanvasPreview(canvasEl, bitmapOrCanvas, labelEl){
+    const c = canvasEl;
+    const ctx = c.getContext("2d");
+    const maxW = 800, maxH = 500;
+    const w = bitmapOrCanvas.width;
+    const h = bitmapOrCanvas.height;
+    const scale = Math.min(maxW / w, maxH / h, 1);
+    c.width = Math.max(1, Math.floor(w * scale));
+    c.height = Math.max(1, Math.floor(h * scale));
+    ctx.clearRect(0,0,c.width,c.height);
+    ctx.drawImage(bitmapOrCanvas, 0,0, c.width, c.height);
+    if (labelEl) labelEl.textContent = `${w}×${h}`;
+  }
+
+  async function updateGlobalOrigPreview(){
+    if (!items.length){
+      pvOrig.getContext("2d").clearRect(0,0,pvOrig.width,pvOrig.height);
+      pvOrigMeta.textContent = "—";
+      return;
+    }
+    const it = items[0];
+    try{
+      const bmp = await createImageBitmap(it.file);
+      drawCanvasPreview(pvOrig, bmp, pvOrigMeta);
+      bmp.close?.();
+    }catch{
+      pvOrigMeta.textContent = "decode failed";
+    }
+  }
+
+  function updateGlobalSettingsChips(){
+    const s = getSettings();
+    pvModeChip.textContent = `mode: ${s.mode}`;
+    pvSizeChip.textContent = `size: ${s.targetKB ? (s.targetKB+"KB") : "off"}`;
+    pvFmtChip.textContent  = `fmt: ${(s.outMime.split("/")[1]||"").toUpperCase()}`;
+  }
+
+  // ===== Process one =====
+  async function processOne(id, { previewOnly }){
+    const it = items.find(x=>x.id===id);
+    if (!it) return;
+
+    try{
+      const opts = getSettings();
+      setItemState(it, previewOnly ? "Previewing…" : "Decoding…", "warn", 5);
+
+      let sourceBlob = it.file;
+
+      if (opts.doRemoveBg){
+        if (it.bgRemovedBlob){
+          setItemState(it, "Using cached BG removal…", "ok", 18);
+          sourceBlob = it.bgRemovedBlob;
+        } else {
+          await ensureBgLib();
+          if (!removeBackground) throw new Error("Background remover failed to load.");
+
+          // Normalize BMP -> PNG for BG remover
+          const isBmp = (sourceBlob.type === "image/bmp") || /\.bmp$/i.test(it.file.name);
+          if (isBmp){
+            setItemState(it, "Converting BMP → PNG (for BG removal)…", "warn", 18);
+            const bmpBitmap = await createImageBitmap(sourceBlob);
+            const tmp = document.createElement("canvas");
+            tmp.width = bmpBitmap.width; tmp.height = bmpBitmap.height;
+            tmp.getContext("2d").drawImage(bmpBitmap, 0, 0);
+            bmpBitmap.close?.();
+            const pngBlob = await canvasToBlob(tmp, "image/png");
+            if (!pngBlob) throw new Error("BMP normalize failed.");
+            sourceBlob = pngBlob;
+          }
+
+          setItemState(it, "Removing background… (cached)", "warn", 26);
+          const removed = await removeBackground(sourceBlob);
+          it.bgRemovedBlob = removed;
+          sourceBlob = removed;
+        }
+      }
+
+      const bmp = await createImageBitmap(sourceBlob);
+      setItemState(it, "Rendering…", "warn", 50);
+
+      // manual crop overrides template
+      const cropP = it.cropP || cropTemplate || null;
+
+      const canvas = await pipelineToCanvas(bmp, opts, cropP);
+      bmp.close?.();
+
+      // Update global OUT preview to match last preview/process
+      updateGlobalSettingsChips();
+      drawCanvasPreview(pvOut, canvas, pvOutMeta);
+
+      setItemState(it, "Encoding…", "warn", 70);
+
+      let blob;
+      if (!opts.targetKB){
+        const q = (opts.outMime === "image/jpeg" || opts.outMime === "image/webp") ? 0.92 : undefined;
+        blob = await canvasToBlob(canvas, opts.outMime, q);
+      } else {
+        blob = await encodeToTarget(canvas, opts.outMime, opts.targetKB, (p)=>{
+          setItemState(it, "Compressing…", "warn", 70 + Math.floor(p*25));
+        });
+      }
+
+      if (!blob) throw new Error("Encoding returned empty output.");
+      const url = URL.createObjectURL(blob);
+
+      if (previewOnly){
+        if (it.previewUrl) URL.revokeObjectURL(it.previewUrl);
+        it.previewBlob = blob;
+        it.previewBytes = blob.size;
+        it.previewUrl = url;
+        it.previewW = canvas.width;
+        it.previewH = canvas.height;
+        setItemState(it, "Preview ready", "ok", 100);
+        return;
+      }
+
+      const base = it.file.name.replace(/\.[^.]+$/, "");
+      const ext = mimeToExt(opts.outMime);
+      it.outName = `${base}.${ext}`;
+
+      if (it.outUrl) URL.revokeObjectURL(it.outUrl);
+      it.outBlob = blob;
+      it.outBytes = blob.size;
+      it.outUrl = url;
+      it.outW2 = canvas.width;
+      it.outH2 = canvas.height;
+
+      processed.set(it.id, blob);
+      downloadZipBtn.disabled = processed.size === 0;
+
+      setItemState(it, "Done", "ok", 100);
+    } catch (err){
+      console.error(err);
+      setItemState(it, `Failed: ${err?.message || "Unknown error"}`, "bad", 100);
+    }
+  }
+
+  // ===== Render list with per-item preview boxes (RESTORED) =====
+  function render(){
+    listEl.innerHTML = "";
+    emptyEl.style.display = items.length ? "none" : "block";
+
+    for (const it of items){
+      const cropLabel = it.cropP ? ` • <span class="warn">Crop:</span> manual` : (cropTemplate ? ` • <span class="warn">Crop:</span> template` : "");
+      const bgLabel = it.bgRemovedBlob ? ` • <span class="ok">BG cached</span>` : "";
+
+      const div = document.createElement("div");
+      div.className = "item";
+      div.innerHTML = `
+        <div class="thumb" data-open="orig" data-id="${it.id}" title="Click to view full / crop">
+          <img alt="" src="${it.url}">
+        </div>
+
+        <div class="meta">
+          <div class="name" title="${escapeHtml(it.file.name)}"><b>${escapeHtml(it.file.name)}</b></div>
+          <div class="stats">
+            ${Number.isFinite(it.origW)? `${it.origW}×${it.origH}` : "—"} • ${fmtBytes(it.origBytes)}
+            ${cropLabel}${bgLabel}
+          </div>
+
+          <div class="status ${it.statusClass || ""}">${it.status || "Waiting"}</div>
+          <div class="prog"><div class="bar" style="width:${it.progress||0}%"></div></div>
+
+          <!-- PER-ITEM PREVIEWS (RESTORED) -->
+          <div class="previewWrap" style="margin-top:10px">
+            <div class="pvBox">
+              <div class="pvTitle"><b>Preview output</b><span class="chip">${it.previewW||"—"}×${it.previewH||"—"}</span></div>
+              <div class="pvCanvas" title="Click to view full (preview)">
+                ${it.previewUrl
+                  ? `<img data-open="preview" data-id="${it.id}" src="${it.previewUrl}" style="max-width:100%;max-height:100%;border-radius:10px;display:block;cursor:pointer">`
+                  : `<span class="tiny">No preview yet</span>`}
+              </div>
+              <div class="pvMeta">${it.previewBlob ? fmtBytes(it.previewBytes) : "Preview uses current settings."}</div>
+            </div>
+
+            <div class="pvBox">
+              <div class="pvTitle"><b>Processed output</b><span class="chip">${it.outW2||"—"}×${it.outH2||"—"}</span></div>
+              <div class="pvCanvas" title="Click to view full (processed)">
+                ${it.outUrl
+                  ? `<img data-open="out" data-id="${it.id}" src="${it.outUrl}" style="max-width:100%;max-height:100%;border-radius:10px;display:block;cursor:pointer">`
+                  : `<span class="tiny">Not processed</span>`}
+              </div>
+              <div class="pvMeta">${it.outBlob ? `${it.outName} • ${fmtBytes(it.outBytes)}` : "Run Process to generate output."}</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button class="secondary" type="button" data-act="manualCrop" data-id="${it.id}" title="Open full view + crop.">Crop</button>
+          <button class="secondary" type="button" data-act="preview" data-id="${it.id}" title="Generate preview for this image.">Preview</button>
+          <button class="secondary" type="button" data-act="process" data-id="${it.id}" title="Generate final output for this image.">Process</button>
+          <button class="secondary" type="button" data-act="download" data-id="${it.id}" ${it.outBlob ? "" : "disabled"} title="Download this processed image.">Download</button>
+          <button class="danger" type="button" data-act="remove" data-id="${it.id}" title="Remove this image.">Remove</button>
+        </div>
+      `;
+      listEl.appendChild(div);
+    }
+
+    listEl.querySelectorAll("button[data-act]").forEach(btn=>{
+      btn.addEventListener("click", async ()=>{
+        const act = btn.getAttribute("data-act");
+        const id = Number(btn.getAttribute("data-id"));
+        const it = items.find(x=>x.id===id);
+        if (!it) return;
+
+        if (act === "remove") removeItem(id);
+        if (act === "manualCrop") openModal(id, "orig");
+        if (act === "preview"){ statusTop.textContent="Previewing…"; await processOne(id,{previewOnly:true}); statusTop.textContent="Ready"; }
+        if (act === "process"){ statusTop.textContent="Processing…"; await processOne(id,{previewOnly:false}); statusTop.textContent="Ready"; }
+        if (act === "download"){ if (it.outBlob) saveAs(it.outBlob, it.outName); }
+      });
+    });
+
+    listEl.querySelectorAll("[data-open]").forEach(el=>{
+      el.addEventListener("click", ()=>{
+        const id = Number(el.getAttribute("data-id"));
+        const which = el.getAttribute("data-open");
+        openModal(id, which);
+      });
+    });
+  }
+
+  function removeItem(id){
+    const idx = items.findIndex(x=>x.id===id);
+    if (idx<0) return;
+    const it = items[idx];
+    if (it.url) URL.revokeObjectURL(it.url);
+    if (it.previewUrl) URL.revokeObjectURL(it.previewUrl);
+    if (it.outUrl) URL.revokeObjectURL(it.outUrl);
+    items.splice(idx,1);
+    processed.delete(id);
+    downloadZipBtn.disabled = processed.size === 0;
+    updateKPI();
+    render();
+    updateGlobalOrigPreview();
+  }
+
+  // ===== Modal / Cropper (percent-based crop) =====
+  function destroyCropper(){
+    if (cropper){ cropper.destroy(); cropper=null; }
+  }
+  function waitImageLoaded(imgEl){
+    return new Promise((resolve, reject)=>{
+      if (imgEl.complete && imgEl.naturalWidth > 0) return resolve();
+      const onLoad = ()=>{ cleanup(); resolve(); };
+      const onErr = ()=>{ cleanup(); reject(new Error("Image failed to load in modal.")); };
+      const cleanup = ()=>{
+        imgEl.removeEventListener("load", onLoad);
+        imgEl.removeEventListener("error", onErr);
+      };
+      imgEl.addEventListener("load", onLoad, { once:true });
+      imgEl.addEventListener("error", onErr, { once:true });
+    });
+  }
+
+  async function openModal(id, which){
+    modalItemId = id;
+    const it = items.find(x=>x.id===id);
+    if (!it) return;
+
+    destroyCropper();
+
+    let src = it.url;
+    if (which === "preview" && it.previewUrl) src = it.previewUrl;
+    if (which === "out" && it.outUrl) src = it.outUrl;
+
+    modalTitle.textContent = it.file.name;
+    modalSub.textContent = `${Number.isFinite(it.origW)? `${it.origW}×${it.origH}` : "—"} • ${fmtBytes(it.origBytes)}`;
+    modalWhich.textContent = `Viewing: ${which.toUpperCase()}`;
+
+    startCropBtn.disabled = true;
+    resetCropBtn.disabled = true;
+    applyCropBtn.disabled = true;
+    applyTemplateAllBtn.disabled = true;
+    clearCropBtn.disabled = !(it.cropP || cropTemplate);
+    cropInfo.textContent = "Loading image…";
+
+    modal.classList.add("show");
+    modalImg.src = src;
+
+    try{
+      await waitImageLoaded(modalImg);
+      startCropBtn.disabled = false;
+      clearCropBtn.disabled = !(it.cropP || cropTemplate);
+
+      if (it.cropP) cropInfo.textContent = "Manual crop set (stored as %).";
+      else if (cropTemplate) cropInfo.textContent = "Template crop exists.";
+      else cropInfo.textContent = "No crop set.";
+    }catch(err){
+      cropInfo.textContent = `Failed to load image: ${err.message}`;
+    }
+  }
+
+  function closeModal(){
+    destroyCropper();
+    modal.classList.remove("show");
+    modalItemId = null;
+  }
+
+  function startCrop(){
+    const it = items.find(x=>x.id===modalItemId);
+    if (!it) return;
+    if (!(modalImg.complete && modalImg.naturalWidth > 0)){
+      cropInfo.textContent = "Wait… image still loading.";
+      return;
+    }
+
+    destroyCropper();
+
+    cropper = new Cropper(modalImg, {
+      viewMode: 1,
+      autoCropArea: 0.8,
+      background: false,
+      movable: true,
+      zoomable: true,
+      rotatable: false,
+      scalable: false,
+    });
+
+    const nw = modalImg.naturalWidth || 1;
+    const nh = modalImg.naturalHeight || 1;
+    const use = it.cropP || cropTemplate;
+    if (use){
+      cropper.setData({
+        x: use.xP * nw,
+        y: use.yP * nh,
+        width: use.wP * nw,
+        height: use.hP * nh,
+      });
+    }
+
+    resetCropBtn.disabled = false;
+    applyCropBtn.disabled = false;
+    applyTemplateAllBtn.disabled = false;
+    clearCropBtn.disabled = false;
+    cropInfo.textContent = "Drag crop box, then Apply.";
+  }
+
+  startCropBtn.addEventListener("click", startCrop);
+  resetCropBtn.addEventListener("click", ()=>cropper?.reset());
+
+  applyCropBtn.addEventListener("click", ()=>{
+    const it = items.find(x=>x.id===modalItemId);
+    if (!it || !cropper) return;
+
+    const nw = modalImg.naturalWidth || 1;
+    const nh = modalImg.naturalHeight || 1;
+    const d = cropper.getData(true);
+
+    it.cropP = {
+      xP: clamp01(d.x / nw),
+      yP: clamp01(d.y / nh),
+      wP: clamp01(d.width / nw),
+      hP: clamp01(d.height / nh),
+      source: "manual"
+    };
+
+    invalidateOutputs(it);
+    destroyCropper();
+    updateKPI();
+    render();
+
+    cropInfo.textContent = "Manual crop saved. Preview/Process to see the result.";
+    resetCropBtn.disabled = true;
+    applyCropBtn.disabled = true;
+    applyTemplateAllBtn.disabled = true;
+  });
+
+  applyTemplateAllBtn.addEventListener("click", ()=>{
+    if (!cropper) return;
+
+    const nw = modalImg.naturalWidth || 1;
+    const nh = modalImg.naturalHeight || 1;
+    const d = cropper.getData(true);
+
+    cropTemplate = {
+      xP: clamp01(d.x / nw),
+      yP: clamp01(d.y / nh),
+      wP: clamp01(d.width / nw),
+      hP: clamp01(d.height / nh),
+      source: "template"
+    };
+
+    // manual crops stay; others use template
+    for (const it of items){
+      if (it.cropP && it.cropP.source === "manual") continue;
+      // no need to store cropP for them; they will use cropTemplate
+      invalidateOutputs(it);
+    }
+
+    destroyCropper();
+    updateKPI();
+    render();
+
+    cropInfo.textContent = "Template saved. It will apply to all (manual crops kept).";
+    resetCropBtn.disabled = true;
+    applyCropBtn.disabled = true;
+    applyTemplateAllBtn.disabled = true;
+  });
+
+  clearCropBtn.addEventListener("click", ()=>{
+    const it = items.find(x=>x.id===modalItemId);
+    if (!it) return;
+
+    // clears only this image manual crop
+    it.cropP = null;
+    invalidateOutputs(it);
+
+    destroyCropper();
+    updateKPI();
+    render();
+
+    cropInfo.textContent = cropTemplate ? "Manual crop cleared. Template may still apply." : "Crop cleared.";
+    resetCropBtn.disabled = true;
+    applyCropBtn.disabled = true;
+    applyTemplateAllBtn.disabled = true;
+    clearCropBtn.disabled = !(it.cropP || cropTemplate);
+  });
+
+  previewThisBtn.addEventListener("click", async ()=>{
+    if (!modalItemId) return;
+    statusTop.textContent="Previewing…";
+    await processOne(modalItemId, { previewOnly:true });
+    statusTop.textContent="Ready";
+  });
+
+  processThisBtn.addEventListener("click", async ()=>{
+    if (!modalItemId) return;
+    statusTop.textContent="Processing…";
+    await processOne(modalItemId, { previewOnly:false });
+    statusTop.textContent="Ready";
+  });
+
+  modalClose.addEventListener("click", closeModal);
+  modal.addEventListener("click", (e)=>{ if (e.target === modal) closeModal(); });
+
+  // ===== Files / drag-drop =====
+  pickBtn.addEventListener("click", ()=>fileInput.click());
+  fileInput.addEventListener("change", (e)=>addFiles([...(e.target.files||[])]).finally(()=>{ fileInput.value=""; }));
+
+  ["dragenter","dragover"].forEach(ev=>{
+    drop.addEventListener(ev, (e)=>{ e.preventDefault(); drop.classList.add("drag"); });
+  });
+  ["dragleave","drop"].forEach(ev=>{
+    drop.addEventListener(ev, (e)=>{ e.preventDefault(); drop.classList.remove("drag"); });
+  });
+  drop.addEventListener("drop", (e)=>addFiles([...(e.dataTransfer?.files||[])]));
+
+  async function addFiles(files){
+    const imgs = files.filter(f => f.type.startsWith("image/") || f.name.match(/\.(png|jpe?g|webp|gif|bmp|avif)$/i));
+    if (!imgs.length) return;
+
+    for (const file of imgs){
+      const id = Date.now() + Math.floor(Math.random()*100000);
+      const url = URL.createObjectURL(file);
+      const it = {
+        id, file, url,
+        origW: NaN, origH: NaN, origBytes: file.size,
+        bgRemovedBlob: null,
+        cropP: null, // manual crop as %
+        previewBlob: null, previewUrl: "", previewBytes: 0, previewW:null, previewH:null,
+        outBlob: null, outUrl: "", outBytes: 0, outName: "", outW2:null, outH2:null,
+        status: "Loaded", statusClass: "ok", progress: 0
+      };
+      items.push(it);
+
+      try{
+        const bmp = await createImageBitmap(file);
+        it.origW = bmp.width;
+        it.origH = bmp.height;
+        bmp.close?.();
+      }catch{
+        it.status = "Could not decode (browser limitation)";
+        it.statusClass = "bad";
+      }
+    }
+
+    updateKPI();
+    render();
+    updateGlobalOrigPreview();
+    updateGlobalSettingsChips();
+  }
+
+  // ===== Buttons =====
+  setBulkFromFirstBtn.addEventListener("click", ()=>{
+    if (!items.length) return;
+    openModal(items[0].id, "orig");
+    // user sets crop box then clicks Apply template to ALL
+  });
+
+  clearAllCropsBtn.addEventListener("click", ()=>{
+    cropTemplate = null;
+    for (const it of items){
+      it.cropP = null;
+      invalidateOutputs(it);
+    }
+    updateKPI();
+    render();
+  });
+
+  previewAllBtn.addEventListener("click", async ()=>{
+    if (!items.length) return;
+    statusTop.textContent = "Previewing all…";
+    for (const it of items) await processOne(it.id, { previewOnly:true });
+    statusTop.textContent = "Ready";
+  });
+
+  processAllBtn.addEventListener("click", async ()=>{
+    if (!items.length) return;
+    statusTop.textContent = "Processing all…";
+    processed.clear();
+    for (const it of items) await processOne(it.id, { previewOnly:false });
+    downloadZipBtn.disabled = processed.size === 0;
+    statusTop.textContent = "Ready";
+  });
+
+  downloadZipBtn.addEventListener("click", async ()=>{
+    if (!processed.size) return;
+    statusTop.textContent = "Building ZIP…";
+    const zip = new JSZip();
+    for (const it of items){
+      if (!it.outBlob) continue;
+      zip.file(it.outName, it.outBlob);
+    }
+    const blob = await zip.generateAsync({type:"blob"});
+    saveAs(blob, `images_${Date.now()}.zip`);
+    statusTop.textContent = "Ready";
+  });
+
+  clearAllBtn.addEventListener("click", ()=>{
+    for (const it of items){
+      if (it.url) URL.revokeObjectURL(it.url);
+      if (it.previewUrl) URL.revokeObjectURL(it.previewUrl);
+      if (it.outUrl) URL.revokeObjectURL(it.outUrl);
+    }
+    items.length = 0;
+    processed.clear();
+    cropTemplate = null;
+    downloadZipBtn.disabled = true;
+    updateKPI();
+    render();
+    updateGlobalOrigPreview();
+    pvOut.getContext("2d").clearRect(0,0,pvOut.width,pvOut.height);
+    pvOutMeta.textContent = "—";
+  });
+
+  // init
+  updateKPI();
+  render();
+  updateGlobalSettingsChips();
+  updateGlobalOrigPreview();
+</script>
+</body>
+</html>
